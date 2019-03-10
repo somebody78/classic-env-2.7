@@ -1,0 +1,180 @@
+---
+# YAML file to be used as input for different playbooks, for ACI, Loadbalancer and firewall
+# Default variables, do not change these unless you know what you're doing
+# Select the right environment, very important!!!!
+aci_env: "apic-fqdn"
+input_vars_version: '2.2'
+
+# override group variables if needed
+override_gv_general:
+  ovr_dummy: ovr_applied
+
+override_gv_aci:
+  ovr_dummy: ovr_applied
+
+override_gv_srx:
+  ovr_dummy: ovr_applied
+
+#########################################################################################################################
+#########################################################################################################################
+###############################                                                                    ######################
+###############################  Adjust values under this line to configure your environment       ######################
+###############################                                                                    ######################
+#########################################################################################################################
+#########################################################################################################################
+
+# general data
+# 'fw' is the cluster name, is used for lookup in gv_general.firewalls
+# ip_ranges internal and external are used for import and export filter on SRX, and discard routes for internet
+# If there are no networks defined comment these lines with a '#', including 'internal'  and 'internet'
+general:
+  doku: "Netzplan <###>"
+  fw: "<firewall-name>"
+  ip_ranges:
+    internal:
+      - "<a.b.c.d/nn>"
+    internet:
+      - "<a.b.c.d/nn>"
+
+# Juniper SRX specific data
+# Limits are used for bandwidth policer on SRX. Reasonable combinations are "100m/14m", "150m/21m", "200m/28m", "250m/35m", "300m/42m"
+# If there are not static routes comment those lines with a '#', including the line with 'static_routes'
+# For ap and vrf change values appropriately and delete unused lines
+srx:
+  ri_id: "<xyz>"
+  bgp_routerid: "<a.b.c.d>"
+  bgp_as: "<646nn>"
+  bandwidth_limit: <100m>
+  burst_limit: <14m>
+  static_routes:
+    - prefix: '<a.b.c.d/nn>'
+      nexthop: '<a.b.c.d>'
+# ACI specific data
+# for 'aps' and 'vrfs', key (string before:) is used as name, value as description
+aci:
+  tenant_name: "<tenant-name>"
+  tenant_desc: "<project-description>, FW {{general.fw}}-{{gv_srx.ri_prefix+srx.ri_id}}, Doku {{general.doku}}"
+  aps:
+    dmz_ap: "AP for DMZ"
+    back_ap: "AP for Back"
+    sync_ap: "AP for Sync like heartbeat and SyCo"
+  vrfs:
+    std_vrf: "Standard VRF"
+    trfr_vrf: "Transfer VRF"
+
+# Radware specific data
+# tbd
+
+###networks:
+###- name: "bla"                # name is used for EPG and BD name on ACI
+###  fw_zone: "bla00"           # Zone name on firewall
+###  desc: "blablabla"          # Description, used on ACI EGP and BD, watch out for special characters
+###  ip_network: "1.2.3.0"      # ip network used in this network
+###  ip_cidr: "24"              # prefix length for the ip network
+###  ip_fw: "1.2.3.1"           # IP of the firewall, if needed. Otherwise leave this empty ""
+###  ip_aci: "1.2.3.1"          # IP of the ACI bridge domain, if needed. Otherwise leave this empty ""
+###  ip_lb: "1.2.3.1"           # IP of the loadbalancer, if needed. Otherwise leave this empty ""
+###  devices: ["aci","fw","lb"] # Device where the network should be present, valid entries are "fw", "aci", "lb"
+###  vlan_id: "1131"            # VLAN ID
+###  attached_devices: ["fw-medc-quavir","ucs1","lb-nmvs"] # list of devices that should be attached to the EPG. See "gv_aci.ports_tdn" for details
+###  ap: "dmz_ap"               # Name of application profile on ACI. This value should be also present in "aci.aps". Used for EPG creation.
+###  vrf: "std_vrf"             # Name of VRF on ACI. This value should be also present in "aci.vrfs". Used for BD creation.
+###  tsm_contract: "no"         # Apply the default consumer contract for TSM, set to 'yes' for TSM networks
+###  # end of network definition
+
+# Fill in missing parameters, copy segment for more networks
+networks:
+- name: "<network-name>"
+  fw_zone: "<zone-name>"
+  desc: "<network description>"
+  ip_network: "<a.b.c.d>"
+  ip_cidr: "<nn>"
+  ip_fw: "<a.b.c.d>"
+  ip_lb: ""
+  ip_aci: ""
+  devices: ["aci","fw","lb"]
+  vlan_id: "wxyz"
+  attached_devices: ["fw-mpdc-quavir","lb_nmvs1"]
+  ap: "<AP name>"
+  vrf: "std_vrf"
+  tsm_contract: "no"
+  # end of network definition
+
+# Fill in missing parameters, uncomment (remove ###) BGP block that is needed
+# BGP parameter
+###bgps:
+###- type: internet
+###  fw_zone: untrust00
+###  tenant: z_internet_ten
+###  vrf: std_vrf
+###  domain: l3_l3o-front_dom
+###  vlan_id: <wxyz>
+###  routerid_leaf_1: 185.79.169.17
+###  routerid_leaf_2: 185.79.169.18
+###  routerid_leaf_3: 185.79.169.21
+###  routerid_leaf_4: 185.79.169.22
+###  koppel_cidr: "/29"
+###  koppel_ip_leaf_1: 146.185.97.x
+###  koppel_ip_leaf_2: 146.185.97.x
+###  koppel_ip_leaf_3: 146.185.97.x
+###  koppel_ip_leaf_4: 146.185.97.x
+###  koppel_ip_fw: 146.185.97.x
+###  as_number_fw: <646nn>
+###  as_number_aci: 64811
+###- type: admin
+###  fw_zone: admin00
+###  tenant: z_admin_ten
+###  vrf: std_vrf
+###  domain: l3_l3o-back_dom
+###  vlan_id: <wxyz>
+###  routerid_leaf_1: 10.161.247.241
+###  routerid_leaf_2: 10.161.247.242
+###  routerid_leaf_3: 10.161.247.245
+###  routerid_leaf_4: 10.161.247.246
+###  koppel_cidr: "/29"
+###  koppel_ip_leaf_1: 10.161.240.x
+###  koppel_ip_leaf_2: 10.161.240.x
+###  koppel_ip_leaf_3: 10.161.240.x
+###  koppel_ip_leaf_4: 10.161.240.x
+###  koppel_ip_fw: 10.161.240.x
+###  as_number_fw: <646nn>
+###  as_number_aci: 64812
+###- type: fusion
+###  fw_zone: fusion00
+###  tenant: z_fusion_ten
+###  vrf: std_vrf
+###  domain: l3_l3o-back_dom
+###  vlan_id: <wxyz>
+###  routerid_leaf_1: 10.161.255.241
+###  routerid_leaf_2: 10.161.255.242
+###  routerid_leaf_3: 10.161.255.245
+###  routerid_leaf_4: 10.161.255.246
+###  koppel_cidr: "/29"
+###  koppel_ip_leaf_1: 10.161.248.x
+###  koppel_ip_leaf_2: 10.161.248.x
+###  koppel_ip_leaf_3: 10.161.248.x
+###  koppel_ip_leaf_4: 10.161.248.x
+###  koppel_ip_fw: 10.161.248.x
+###  as_number_fw: <646nn>
+###  as_number_aci: 64813
+###- type: transfer
+###  fw_zone: transfer00
+###  tenant: <tenant_name>
+###  vrf: <vrf_name>
+###  domain: l3_l3o-back_dom
+###  vlan_id: <wxyz>
+###  routerid_leaf_1: <a.b.c.d>
+###  routerid_leaf_2: <a.b.c.d>
+###  routerid_leaf_3: <a.b.c.d>
+###  routerid_leaf_4: <a.b.c.d>
+###  koppel_cidr: "/29"
+###  koppel_ip_leaf_1: <a.b.c.d>
+###  koppel_ip_leaf_2: <a.b.c.d>
+###  koppel_ip_leaf_3: <a.b.c.d>
+###  koppel_ip_leaf_4: <a.b.c.d>
+###  koppel_ip_fw: <a.b.c.d>
+###  as_number_fw: <646nn>
+###  as_number_aci: <648nn>
+
+# End of file
+...

@@ -1,0 +1,45 @@
+---
+# YAML file to be used as input to deploy static ports to EPGs in ACI
+# Select the right environment, very important!!!!
+aci_env: "<add-your-apic-here>"
+input_vars_version: '2.2'
+
+# override group variables if needed
+override_gv_general:
+  ovr_dummy: ovr_applied
+
+override_gv_aci:
+  ovr_dummy: ovr_applied
+
+override_gv_srx:
+  ovr_dummy: ovr_applied
+
+#########################################################################################################################
+#########################################################################################################################
+###############################                                                                    ######################
+###############################  Adjust values under this line to configure your environment       ######################
+###############################                                                                    ######################
+#########################################################################################################################
+#########################################################################################################################
+
+
+epg_list:
+  - tenant:        "<your-tenant-name>"
+    ap:            "<your-ap-name>"
+    epg:           "<your-epg-name>"
+    vlan_id:       "<your-vlan-id>"
+    port_group:    "<port-group-is-just-informational>"
+    missing_ports:
+    - { interface_type: "vpc", pod_id: "1", leafs: [2105,2106], interface: "cluster2-node1_ipg" }
+    - { interface_type: "vpc", pod_id: "1", leafs: [2105,2106], interface: "cluster2-node2_ipg" }
+  - tenant:        "<your-tenant-name>"
+    ap:            "<your-ap-name>"
+    epg:           "<your-epg-name>"
+    vlan_id:       "<your-vlan-id>"
+    port_group:    "<port-group-is-just-informational>"
+    missing_ports:
+    - { interface_type: "switch_port", pod_id: "1", leafs: [2103], interface: "eth1/19" }
+    - { interface_type: "switch_port", pod_id: "1", leafs: [2103], interface: "eth1/22" }
+
+# End of file
+...

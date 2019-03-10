@@ -1,0 +1,48 @@
+---
+# Playbook to test napalm for an SRX firewall
+# Variable are pulled from a file
+#
+
+- name: Ansible generic configs
+  vars_files:
+    - ~/.vars-aci-credentials.yml
+    - "{{ varfile }}"
+
+  hosts: "{{ general.fw }}"
+
+  connection: local
+  gather_facts: no
+
+  vars:
+    playbook_version: '2.2'
+    deploy_config: "n"
+
+  tasks:
+  #
+  # Compare playbook_version and input_vars_version
+  #
+  - name: 'Check input_vars_version' 
+    fail: msg="playbook_version and input_vars_version do not match. Maybe you used the wrong template file?"
+    when: playbook_version != input_vars_version
+
+  #
+  # Get facts using Napalm
+  #
+  - name: get facts from device using Napalm
+    napalm_get_facts:
+      hostname: "{{ ansible_host }}"
+      username: "{{ apic_user }}"
+      password: "{{ apic_pass }}"
+      dev_os: "junos"
+      timeout: 180
+      filter: "facts"
+    register: result
+    
+  #
+  # Print results from get_facts
+  #
+  - name: print facts from device
+    debug: msg={{ result.ansible_facts.napalm_facts }}
+
+# This is the end, my friend
+...

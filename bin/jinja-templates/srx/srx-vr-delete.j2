@@ -1,0 +1,109 @@
+#jinja2: lstrip_blocks: True
+{# SRX base config, version 0.1 #}
+{# !!!!!!!!! Bandwidth policer and filter #}
+delete firewall policer {{gv_srx.ri_prefix+srx.ri_id}}-bandwidth-policer
+delete firewall family inet filter {{gv_srx.ri_prefix+srx.ri_id}}-bandwidth-filter
+
+{# !!!!!!!!! Policies #}
+{% for item in bgps|default([]) %}
+  {% for item2 in bgps|default([]) %}
+delete security policies from-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}} to-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item2.fw_zone}}
+delete security policies from-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item2.fw_zone}} to-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}
+  {% endfor %}
+{% endfor %}
+
+{% for item in networks|default([]) %}
+  {% for item2 in networks|default([]) %}
+    {% if 'fw' in item.devices and 'fw' in item2.devices %}
+delete security policies from-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}} to-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item2.fw_zone}}
+delete security policies from-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item2.fw_zone}} to-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+
+{% for item in bgps|default([]) %}
+  {% for item2 in networks|default([]) %}
+    {% if 'fw' in item2.devices %}
+delete security policies from-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}} to-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item2.fw_zone}}
+delete security policies from-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item2.fw_zone}} to-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+
+{# !!!!!!!!! Zones #}
+{% for item in bgps|default([]) %}
+delete security zones security-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}
+{% endfor %}
+{% for item in networks|default([]) %}
+  {% if 'fw' in item.devices %}
+delete security zones security-zone {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}
+  {% endif %}
+{% endfor %}
+
+{# !!!!!!!!! Interfaces #}
+{% for item in bgps|default([]) %}
+delete interfaces {{gv_general.firewalls[general.fw].dialog_intf}} unit {{item.vlan_id}}
+{% endfor %}
+{% for item in networks|default([]) %}
+  {% if 'fw' in item.devices %}
+delete interfaces {{gv_general.firewalls[general.fw].dialog_intf}} unit {{item.vlan_id}}
+  {% endif %}
+{% endfor %}
+
+{# !!!!!!!!! BGP import and export filter #}
+{% for item in bgps|default([]) %}
+  {% if item.type == 'internet' %}
+    {% for range in general.ip_ranges.internet %}
+delete policy-options prefix-list pl-{{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone }}-export
+    {% endfor %}
+    {% for range in gv_general.ip_ranges.internet %}
+delete policy-options prefix-list pl-{{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone }}-import
+    {% endfor %}
+  {% endif%}
+  {% if item.type == 'admin' %}
+    {% for range in general.ip_ranges.internal %}
+delete policy-options prefix-list pl-{{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone }}-export
+    {% endfor %}
+    {% for range in gv_general.ip_ranges.admin_psa %}
+delete policy-options prefix-list pl-{{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone }}-import
+    {% endfor %}
+  {% endif%}
+  {% if item.type == 'fusion' %}
+    {% for range in general.ip_ranges.internal %}
+delete policy-options prefix-list pl-{{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone }}-export
+    {% endfor %}
+    {% for range in gv_general.ip_ranges.fusion %}
+delete policy-options prefix-list pl-{{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone }}-import
+    {% endfor %}
+  {% endif%}
+  {% if item.type == 'transfer' %}
+    {% for range in general.ip_ranges.internal %}
+delete policy-options prefix-list pl-{{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone }}-export
+    {% endfor %}
+    {% for range in gv_general.ip_ranges.transfer %}
+delete policy-options prefix-list pl-{{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone }}-import
+    {% endfor %}
+  {% endif%}
+{% endfor %}
+
+{% for item in bgps|default([]) %}
+  {% if item.type == 'internet' %}
+delete policy-options policy-statement {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}-export
+delete policy-options policy-statement {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}-import
+  {% endif%}
+  {% if item.type == 'admin' %}
+delete policy-options policy-statement {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}-export
+delete policy-options policy-statement {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}-import
+  {% endif%}
+  {% if item.type == 'fusion' %}
+delete policy-options policy-statement {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}-export
+delete policy-options policy-statement {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}-import
+  {% endif%}
+  {% if item.type == 'transfer' %}
+delete policy-options policy-statement {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}-export
+delete policy-options policy-statement {{gv_srx.ri_prefix+srx.ri_id}}-{{item.fw_zone}}-import
+  {% endif%}
+{% endfor %}
+
+{# !!!!!!!!! Routing instance #}
+delete routing-instances {{gv_srx.ri_prefix+srx.ri_id+gv_srx.ri_suffix}}

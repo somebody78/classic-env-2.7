@@ -1,0 +1,65 @@
+---
+#
+# Env1 group variables
+#
+# ip_ranges are used to created static routes and BGP import- and export filter for the SRX firewall
+gv_general_default:
+  ip_ranges:
+    admin_psa:
+      - 10.10.10.0/24
+      - 20.20.20.0/25
+    fusion:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+    internet:
+      - 0.0.0.0/0
+    transfer:
+      - 0.0.0.0/0
+# This sections describes how the firewalls are named and connected to the ACI fabric leaf switches. Adjust this to your environment
+  firewalls:
+    fw-cluster1:
+      shortname: 'cluster1'
+      model: 'junos'
+      dialog_intf: 'reth0'
+      aci_nodes:
+        - name: 'cluster1-node1'
+          aci_tdn: 'topology/pod-1/protpaths-2101-2102/pathep-[cluster1-node1_ipg]'
+          leafs:
+            - 'topology/pod-1/node-2101'
+            - 'topology/pod-1/node-2102'
+        - name: 'cluster1-node2'
+          aci_tdn: 'topology/pod-3/protpaths-2301-2302/pathep-[cluster1-node2_ipg]'
+          leafs:
+            - 'topology/pod-3/node-2301'
+            - 'topology/pod-3/node-2302'
+
+# Suffixes for BD and EPG are automatically added when deploying. The other suffixes are just for reference
+# Adjust to your setup if needed, especially the "domain_name". This domain is used when creating EPGs.
+# In ports_tdn you can define groups of ports. This ports can be later attached to EPGs by referencing the name, e.g. "cluster1".
+# In this example there a 2 groups. "cluster1" covers the 2 nodes of a firewall cluster, each node connected to 2 leafs with an vPC.
+# The "server-group1" contains there specific switchports. You can add more groups here if needed.
+gv_aci_default:
+  ap_suffix: "_ap"
+  ten_suffix: "_ten"
+  epg_suffix: "_epg"
+  bd_suffix: "_bd"
+  vrf_suffix: "_vrf"
+  domain_type: "phys"
+  domain_name: "phys_classic-static_dom"
+  port_mode: "regular"
+  ports_tdn:
+    cluster1:
+      - { interface_type: "vpc", pod_id: "1", leafs: [2101,2102], interface: "cluster1-node1_ipg" }
+      - { interface_type: "vpc", pod_id: "3", leafs: [2301,2302], interface: "cluster1-node2_ipg" }
+    server-group1:
+      - { interface_type: "switch_port", pod_id: "1", leafs: [2103], interface: "eth1/18" }
+      - { interface_type: "switch_port", pod_id: "1", leafs: [2103], interface: "eth1/21" }
+      - { interface_type: "switch_port", pod_id: "1", leafs: [2104], interface: "eth1/23" }
+
+gv_srx_default:
+  ri_prefix: "vs"
+  ri_suffix: "-vr"
+
+# End of file
+...

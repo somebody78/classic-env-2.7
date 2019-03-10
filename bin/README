@@ -1,0 +1,145 @@
+README fuer Network Automation, data model and service deployment
+================================================================
+
+This repository contains files to deploy a classic tenant in ACI using ansible playbooks, jinja templates, etc..
+This short version of the READM contains a manifest of included files and how to use the playbook.
+For details on how and when to use these playbooks please refer to README-details.
+
+Manifest:
+=========
+classic-env/
+    bin/                                    Directory for playbooks and template put under version control
+        jinja-templates/                    Directory containing Jinja templates, grouped by platform
+            aci/
+                aci-create-l3out.j2                 Jinja template to create an L3Out from ACI to SRX routing instance, highly environment specific template
+                aci-delete-l3out.j2                 Jinja template to delete an L3Out from ACI to SRX routing instance, highly environment specific template
+                aci-faultinst-list.j2               Jinja template to create a list of ACI fault instances
+                aci-faultrecord-list.j2             Jinja template to create a list of ACI fault records
+            srx/
+                srx-vr-set.j2                       Jinja template to create a config file to configure an SRX routing instance including interfaces and security zones
+                srx-vr-delete.j2                    Jinja template to create a config file to delete an SRX routing instance including interfaces and security zones
+        var-files-templates/                        Directory containing data model templates, aka var-files, for different environments
+            input-vars.yml-template                 Generic template file
+            .vars-aci-credentials.yml               Template for credentials file
+            group-vars-template.yml                 Template for group_vars file
+            input-vars-static-ports.yml-template    Template to add static ports to a list of EPGs
+        
+        pb-create-aci.yml                   Playbook to create a classic tenant in ACI
+        pb-delete-aci.yml                   Playbook to delete a classic tenant from ACI
+        pb-create-fw-napalm.yml             Playbook to create a routing instance for an classic tenant on a SRX firewall
+        pb-delete-fw-napalm.yml             Playbook to create a routing instance for an classic tenant on a SRX firewall
+        pb-deploy-static-ports.yml          Just Add static ports to EPGs. Input is based another format. See "var-files-templates" for an example.
+
+    data/                                   Directory for runtime data, version control is not necessary
+        output-files/                       Directory containing files created by ansible playbooks
+        var-files/                          Directory for data model files for specific projects
+
+Requirements:
+=============
+These playbooks are written and tested with Ansible 2.7.5 and are based on the ACI Ansible modules.
+For the SRX part Napalm is used. 
+Make sure to have a working Ansible and Napalm setup. Please refer to the respective web sites for installation support.
+
+Usage:
+======
+Day-0 preparations:
+===================
+#1 Create your credentials file
+Copy the file ".vars-aci-credentials.yml" into your home directory and fill in "apic_user" and "apic_password".
+Make sure to adjust the file permissions that nobody else can read this file.
+
+#2 Create your Ansible inventory, if you haven't done that yet.
+Some variables needed for the deployment are specific for an ACI environment, e.g. switchports a firewall is connected to. These variables are organized into group variables. 
+If you have more than one ACI fabric you can split them into different groups in the Ansible inventory and create specific group_var files for every environment.
+Copy the group_vars template file "var-files-templates/group-vars-template.yml" to your ACI inventory group_vars path and adjust the informations to your need.
+
+#3 Prepare your data model(s), aka var-file template(s)
+Create your own template file by editing the file "classic-env/bin/var-files-templates/input-vars.yml-template"to your needs.
+If you have multiple environments you can copy this file and create different templates.
+
+Service deployment:
+===================
+#1 Prepare var-file for project
+Copy the apropriate file from "classic-env/bin/var-files-templates/" to "classic-env/data/var-files" and rename it.
+Then edit this file according to the definitions for your project.
+
+Copy-and-paste ready: ------------------------------------------------------------------------------------------------------------------------------------------
+cd <your-path>/classic-env/data/var-files/
+cp ../../bin/var-files-templates/<choose-your-template.yml> ./<your-var-file>.yml
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#2 Deploy ACI
+Switch to the directory containing the ansible playbooks, "classic-env/bin/"
+Run the playbook, provide the name of your projects var-file as an extra-var.
+    ansible-playbook [-i <your-inventory-file>] pb-create-aci.yml --extra-vars="varfile=../data/var-files/<your-var-file>.yml"
+
+
+Copy-and-paste ready: ------------------------------------------------------------------------------------------------------------------------------------------
+cd <your-path>/classic-env/bin/
+ansible-playbook -i <your-path>/inventory/aci-inventory pb-create-aci.yml --extra-vars="varfile=../data/var-files/<your-var-file>.yml"
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Keep an eye on the Ansible messages
+
+#3 Check for faults caused by the deployment
+One of the last messages from Ansible should show you the number of faults created in the ACI since the start of the playbook and the path to the file containing some details.
+This file is overwritten everytime the playbook runs.
+
+Copy-and-paste ready: ------------------------------------------------------------------------------------------------------------------------------------------
+cat <your-path>/classic-env/data/output-files/aci-fault-list.txt
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#4 Deploy firewall config
+Switch to the directory containing the ansible playbooks, "classic-env/bin/"
+Run the playbook, provide the name of your projects var-file as an extra-var.
+    ansible-playbook [-i <your-inventory-file>] pb-create-fw.yml --extra-vars="varfile=../classic-env/data/var-files/<your-var-file>.yml"
+
+The file containing the firewall configuration will be written to "classic-env/data/output-files".
+Copy and paste the content into your firewall as needed.
+
+Copy-and-paste ready: ------------------------------------------------------------------------------------------------------------------------------------------
+cd <your-path>/classic-env/bin/
+ansible-playbook -i <your-path>/inventory/aci-inventory pb-create-fw-napalm.yml --extra-vars="varfile=../data/var-files/<your-var-file>.yml"
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Service deletion:
+=================
+#1 Prepare var-file for project
+Copy the apropriate file from "classic-env/bin/var-files-templates/" to "classic-env/data/var-files" and rename it.
+Then edit this file according to the definitions for your project. If you have the var-file used for creation available you can use that.
+Just make sure that the format of the var-file is compatible with the current playbook and the ACI configuration wasn't changed manually.
+
+#2 Run the playbook
+Switch to the directory containing the ansible playbooks, "classic-env/bin/"
+Run the playbook, provide the name of your projects var-file as an extra-var.
+    ansible-playbook [-i <your-inventory-file>] pb-delete-aci.yml --extra-vars="varfile=../classic-env/data/var-files/<your-var-file>.yml"
+
+Copy-and-paste ready: ------------------------------------------------------------------------------------------------------------------------------------------
+cd <your-path>/classic-env/bin/
+ansible-playbook -i <your-path>/inventory/aci-inventory pb-delete-aci.yml --extra-vars="varfile=../data/var-files/<your-var-file>.yml"
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Keep an eye on the Ansible messages
+
+
+#3 Check for faults caused by the deployment
+One of the last messages from Ansible should show you the number of faults created in the ACI since the start of the playbook and the path to the file containing some details.
+This file is overwritten everytime the playbook runs.
+ACI makes the distinction between fault instances and fault records. Fault records show more details and there can be fault record entries for an older fault, e.g. there is a regular check or something changes.
+Usually it is sufficient to check the new created fault instances.
+
+Copy-and-paste ready: ------------------------------------------------------------------------------------------------------------------------------------------
+cat <your-path>/classic-env/data/output-files/aci-faultinst-list.txt
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Change history:
+Version     Date        Comment
+1.0                     Initial version
+2.0         2018-12-28  Migration from Ansible 2.4 to 2.7.5; mainly adjusting loop syntax
+                        EPG static port assignment: Replacing self-written aci_rest with Ansible module aci_static_binding_to_epg
+                        Moving generic environment variables from input-vars file to Ansible group variables
+                        Simplify directory structure: "bin-classic-env" renamed to "bin", "data-classic-env" renamed to "data"
+2.2         2019-03-01  Use timestamps in firewall playbooks to make the names of created files unique(ish)
+                        Added functionality to overwrite group_vars in the var-file.
